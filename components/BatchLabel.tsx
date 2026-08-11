@@ -2,6 +2,7 @@
 import React from 'react';
 import { Printer, ShieldCheck, AlertTriangle, AlertOctagon } from 'lucide-react';
 import { BatchStatus } from '../types';
+import PrintHeader from './PrintHeader';
 
 interface BatchLabelProps {
   gtin: string;
@@ -42,6 +43,13 @@ const BatchLabel: React.FC<BatchLabelProps> = ({ gtin, lot, expiry, productName,
             
             <div className="flex-1 p-3 flex flex-col gap-2">
                 
+                {/* Print Header Audit Trail */}
+                <PrintHeader 
+                  docType="GS1_BATCH_LABEL" 
+                  docId={lot || gtin || 'LOT-0001'} 
+                  docTitle={`GS1 Batch Label - ${productName || 'Product'} (Lot: ${lot})`} 
+                />
+
                 {/* Warning Text */}
                 <div className="border border-red-600 p-1.5 mb-1">
                     <p className="text-[7px] text-red-600 font-bold leading-tight text-justify">

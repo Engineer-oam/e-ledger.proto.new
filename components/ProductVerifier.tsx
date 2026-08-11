@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LedgerService } from '../services/ledgerService';
 import { AuthService } from '../services/authService';
-import { Batch, User } from '../types';
-import { Search, ShieldCheck, XCircle, Clock, MapPin, CheckCircle2, Fingerprint, Camera, Stamp, AlertOctagon, Award, Building2, UserCheck, Briefcase, Globe } from 'lucide-react';
+import { Batch, User, PrintAuditRecord } from '../types';
+import { Search, ShieldCheck, XCircle, Clock, MapPin, CheckCircle2, Fingerprint, Camera, Stamp, AlertOctagon, Award, Building2, UserCheck, Briefcase, Globe, Printer, FileText, FileCheck } from 'lucide-react';
 import QRScanner from './QRScanner';
 
 const ProductVerifier: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'product' | 'partner'>('product');
+  const [activeTab, setActiveTab] = useState<'product' | 'partner' | 'print'>('product');
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<Batch | null>(null);
   const [partnerResult, setPartnerResult] = useState<User | null>(null);
+  const [printResult, setPrintResult] = useState<PrintAuditRecord | null>(null);
+  const [allPrintAudits, setAllPrintAudits] = useState<PrintAuditRecord[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [duplicateAlert, setDuplicateAlert] = useState<{detected: boolean, msg: string}>({ detected: false, msg: '' });
+
+  useEffect(() => {
+    LedgerService.getPrintAudits().then(audits => setAllPrintAudits(audits));
+  }, []);
 
   const handleVerify = async (e?: React.FormEvent, directInput?: string) => {
     if (e) e.preventDefault();
@@ -24,8 +30,30 @@ const ProductVerifier: React.FC = () => {
     setLoading(true);
     setError('');
     setResult(null);
+    setPrintResult(null);
     setSearched(true);
     setDuplicateAlert({ detected: false, msg: '' });
+
+    const clean = searchQuery.trim().toUpperCase();
+
+    // If query looks like a Print Audit ID (e.g. PRT- or PRINT-), automatically search Print Audits
+    if (clean.startsWith('PRT-') || clean.startsWith('PRINT-') || activeTab === 'print') {
+      try {
+        const record = await LedgerService.getPrintAuditByID(clean);
+        if (record) {
+          setActiveTab('print');
+          setPrintResult(record);
+          setQuery(record.id);
+        } else {
+          setError(`No Print Audit record found for ID '${searchQuery.trim()}'. Unregistered or forged hard copy.`);
+        }
+      } catch (err) {
+        setError('Print Audit verification failed.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       // 1. Anti-Counterfeit Check (POS API)
@@ -47,7 +75,7 @@ const ProductVerifier: React.FC = () => {
         setResult(batch);
         setQuery(searchQuery.trim());
       } else {
-        setError('Invalid Identification. This product may be illicit or counterfeit.');
+        setError('Invalid Identification. This product or document ID was not found on the network.');
       }
     } catch (err) {
       setError('Verification Error.');
@@ -82,9 +110,7 @@ const ProductVerifier: React.FC = () => {
   const handleCameraScan = (text: string) => {
     setShowScanner(false);
     setQuery(text);
-    if (activeTab === 'product') {
-        handleVerify(undefined, text);
-    }
+    handleVerify(undefined, text);
   };
 
   return (
@@ -99,46 +125,57 @@ const ProductVerifier: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-           <h2 className="text-2xl font-bold text-slate-800">Verification Services</h2>
-           <p className="text-slate-500 text-sm">Verify Products (GTIN) and Trading Partners (GLN)</p>
+           <h2 className="text-2xl font-bold text-slate-800">Verification & Audit Services</h2>
+           <p className="text-slate-500 text-sm">Verify Products (GTIN), Trading Partners (GLN), and Printed Document Audit Origin (QR/Unique Print ID)</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-t-2xl border-b border-slate-200 px-2 flex gap-2">
+      <div className="bg-white rounded-t-2xl border-b border-slate-200 px-2 flex gap-2 overflow-x-auto">
          <button 
-            onClick={() => { setActiveTab('product'); setQuery(''); setResult(null); setError(''); setSearched(false); }}
-            className={`px-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'product' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setActiveTab('product'); setQuery(''); setResult(null); setPrintResult(null); setError(''); setSearched(false); }}
+            className={`px-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'product' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
          >
             <ShieldCheck size={18} />
             Product Authenticity
          </button>
          <button 
-            onClick={() => { setActiveTab('partner'); setQuery(''); setPartnerResult(null); setError(''); setSearched(false); }}
-            className={`px-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'partner' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setActiveTab('partner'); setQuery(''); setPartnerResult(null); setPrintResult(null); setError(''); setSearched(false); }}
+            className={`px-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'partner' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
          >
             <Building2 size={18} />
             Partner GLN Status
          </button>
+         <button 
+            onClick={() => { setActiveTab('print'); setQuery(''); setPrintResult(null); setError(''); setSearched(false); }}
+            className={`px-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'print' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+         >
+            <Printer size={18} />
+            Print Audit Trace (Unique ID)
+         </button>
       </div>
 
       <div className="bg-white rounded-b-2xl shadow-sm border border-slate-200 border-t-0 mb-8 w-full overflow-hidden">
-        <form onSubmit={activeTab === 'product' ? (e) => handleVerify(e) : handlePartnerVerify} className="p-4 md:p-6 flex flex-col md:flex-row items-center gap-3 md:gap-4 bg-slate-50 border-b border-slate-100">
+        <form onSubmit={activeTab === 'partner' ? handlePartnerVerify : (e) => handleVerify(e)} className="p-4 md:p-6 flex flex-col md:flex-row items-center gap-3 md:gap-4 bg-slate-50 border-b border-slate-100">
           <div className="relative flex-1 w-full max-w-2xl">
             <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={activeTab === 'product' ? "Enter Product Hash or Batch ID..." : "Enter 13-digit Global Location Number (GLN)..."}
+              placeholder={
+                activeTab === 'product' ? "Enter Product Hash, Batch ID, or Print Audit ID..." : 
+                activeTab === 'partner' ? "Enter 13-digit Global Location Number (GLN)..." :
+                "Enter Unique Print Audit ID (e.g., PRT-2026-881920)..."
+              }
               className="w-full pl-12 pr-12 py-3.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-sm shadow-sm"
             />
-            {activeTab === 'product' && (
+            {activeTab !== 'partner' && (
                 <button
                 type="button"
                 onClick={() => setShowScanner(true)}
                 className="absolute right-3 top-2.5 p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                title="Scan"
+                title="Scan QR Code"
                 >
                 <Camera size={22} />
                 </button>
@@ -352,6 +389,185 @@ const ProductVerifier: React.FC = () => {
                                 <br/>Always verify digital signatures on invoices matching this GLN.
                             </p>
                         </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Print Audit Result View */}
+        {printResult && activeTab === 'print' && (
+            <div className="bg-white animate-in fade-in slide-in-from-bottom-8 duration-700 p-8">
+                <div className="border border-indigo-200 rounded-3xl overflow-hidden shadow-xl bg-white">
+                    {/* Header Banner */}
+                    <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Printer size={120} />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full font-bold text-xs uppercase tracking-wider mb-3 border border-emerald-500/30">
+                                    <CheckCircle2 size={14} />
+                                    <span>Verified Hard Copy Print Audit</span>
+                                </div>
+                                <h3 className="text-3xl font-black">{printResult.docTitle || printResult.docId}</h3>
+                                <p className="text-indigo-300 font-mono text-sm mt-1 flex items-center gap-2">
+                                    <span>UNIQUE PRINT ID:</span>
+                                    <span className="bg-indigo-600/80 text-white px-2 py-0.5 rounded font-black">{printResult.id}</span>
+                                </p>
+                            </div>
+                            <div className="bg-white p-2 rounded-2xl shadow-lg shrink-0 text-center">
+                                <img 
+                                  src={`https://bwipjs-api.metafloor.com/?bcid=qrcode&text=${encodeURIComponent(printResult.id)}&scale=2`} 
+                                  alt="Print QR" 
+                                  className="w-20 h-20 object-contain mx-auto"
+                                />
+                                <span className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-tighter">HEADER QR SEAL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Audit Details */}
+                    <div className="p-8 space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                                <p className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <Globe size={13} /> Issuer GLN Number
+                                </p>
+                                <p className="text-xl font-mono font-black text-slate-900">{printResult.printedByGLN}</p>
+                                <p className="text-[11px] text-indigo-700 font-semibold mt-1">Global Location Number Verified</p>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <UserCheck size={13} /> Person Who Printed
+                                </p>
+                                <p className="text-lg font-bold text-slate-900">{printResult.printedByName}</p>
+                                <p className="text-xs text-slate-500 font-medium">Role: {printResult.printedByRole.replace(/_/g, ' ')}</p>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <Building2 size={13} /> Organization / Node
+                                </p>
+                                <p className="text-lg font-bold text-slate-900">{printResult.printedByOrg}</p>
+                                <p className="text-xs text-slate-500 font-medium">Authorized Network Node</p>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <FileText size={13} /> Document Category
+                                </p>
+                                <p className="text-lg font-bold text-slate-900">{printResult.docType.replace(/_/g, ' ')}</p>
+                                <p className="text-xs text-slate-500 font-mono">Ref ID: {printResult.docId}</p>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <Clock size={13} /> Print Timestamp
+                                </p>
+                                <p className="text-sm font-bold text-slate-900">{new Date(printResult.timestamp).toLocaleString('en-IN')}</p>
+                                <p className="text-[11px] text-slate-500">Recorded on Immutable Ledger</p>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <Fingerprint size={13} /> Audit Verification
+                                </p>
+                                <span className="inline-block bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">
+                                    AUTHENTICATED ORIGIN
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* On-Chain Signature */}
+                        <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-mono text-indigo-400 font-bold flex items-center gap-2">
+                                    <Stamp size={14} /> Cryptographic Proof Hash
+                                </span>
+                                <span className="text-[10px] text-slate-400">SHA-256 Signature</span>
+                            </div>
+                            <p className="font-mono text-xs text-emerald-400 break-all bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                {printResult.signature}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Recent Print Audit Logs (Visible in Print Tab) */}
+        {activeTab === 'print' && (
+            <div className="p-6 md:p-8 border-t border-slate-200 bg-slate-50">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <Printer size={20} className="text-indigo-600" />
+                            <span>Network Print Audit Registry</span>
+                        </h3>
+                        <p className="text-slate-500 text-xs mt-0.5">Real-time log of all official printed document origins across operational roles</p>
+                    </div>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full">
+                        {allPrintAudits.length} Records Logged
+                    </span>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase font-black tracking-wider text-[10px]">
+                                <tr>
+                                    <th className="p-3.5">Print Audit ID</th>
+                                    <th className="p-3.5">Document</th>
+                                    <th className="p-3.5">Printed By</th>
+                                    <th className="p-3.5">GLN No.</th>
+                                    <th className="p-3.5">Timestamp</th>
+                                    <th className="p-3.5 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium">
+                                {allPrintAudits.map((record) => (
+                                    <tr key={record.id} className="hover:bg-indigo-50/50 transition-colors">
+                                        <td className="p-3.5 font-mono font-bold text-indigo-700">
+                                            {record.id}
+                                        </td>
+                                        <td className="p-3.5">
+                                            <p className="font-bold text-slate-900">{record.docTitle || record.docId}</p>
+                                            <p className="text-[10px] text-slate-500 font-mono">{record.docType.replace(/_/g, ' ')}</p>
+                                        </td>
+                                        <td className="p-3.5">
+                                            <p className="font-bold text-slate-800">{record.printedByName}</p>
+                                            <p className="text-[10px] text-slate-500">{record.printedByRole.replace(/_/g, ' ')} • {record.printedByOrg}</p>
+                                        </td>
+                                        <td className="p-3.5 font-mono font-bold text-slate-700">
+                                            {record.printedByGLN}
+                                        </td>
+                                        <td className="p-3.5 text-slate-500 text-[11px]">
+                                            {new Date(record.timestamp).toLocaleString('en-IN')}
+                                        </td>
+                                        <td className="p-3.5 text-right">
+                                            <button 
+                                              onClick={() => {
+                                                setPrintResult(record);
+                                                setQuery(record.id);
+                                                setSearched(true);
+                                              }}
+                                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm"
+                                            >
+                                              Audit Print
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {allPrintAudits.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="p-8 text-center text-slate-400">
+                                            No print audit records registered yet.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

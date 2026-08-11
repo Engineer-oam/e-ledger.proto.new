@@ -4,12 +4,13 @@ import { LedgerService } from '../../services/ledgerService';
 import { 
   FileText, ShieldCheck, FileCheck, Landmark, Building, Lock, AlertCircle, 
   Plus, CheckCircle2, XCircle, Clock, Search, ExternalLink, Hash, Eye, 
-  FileSpreadsheet, Scale, ChevronRight, Award, RefreshCw, Layers, Shield
+  FileSpreadsheet, Scale, ChevronRight, Award, RefreshCw, Layers, Shield, Printer
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import BatchManager from '../BatchManager';
 import FinancialRecords from '../FinancialRecords';
 import DocumentVault from '../DocumentVault';
+import PrintableAuditReport from '../PrintableAuditReport';
 
 interface AuditorDashboardProps {
   user: User;
@@ -30,6 +31,7 @@ const AuditorDashboard: React.FC<AuditorDashboardProps> = ({ user }) => {
   // Modal States
   const [showCreateEngagementModal, setShowCreateEngagementModal] = useState<boolean>(false);
   const [showNewObservationModal, setShowNewObservationModal] = useState<boolean>(false);
+  const [showPrintReportModal, setShowPrintReportModal] = useState<boolean>(false);
 
   // Form State for New Engagement
   const [engagementForm, setEngagementForm] = useState({
@@ -211,8 +213,15 @@ const AuditorDashboard: React.FC<AuditorDashboardProps> = ({ user }) => {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <button
+              onClick={() => setShowPrintReportModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              <Printer size={18} />
+              <span>Export Findings (PDF)</span>
+            </button>
+            <button
               onClick={() => setShowCreateEngagementModal(true)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={18} />
               <span>Propose Engagement</span>
@@ -512,13 +521,23 @@ const AuditorDashboard: React.FC<AuditorDashboardProps> = ({ user }) => {
               </p>
             </div>
 
-            <button
-              onClick={() => setShowNewObservationModal(true)}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow"
-            >
-              <Plus size={16} />
-              <span>Record Observation</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowPrintReportModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer"
+              >
+                <Printer size={16} />
+                <span>Export Findings Report (PDF)</span>
+              </button>
+
+              <button
+                onClick={() => setShowNewObservationModal(true)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer"
+              >
+                <Plus size={16} />
+                <span>Record Observation</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -799,6 +818,17 @@ const AuditorDashboard: React.FC<AuditorDashboardProps> = ({ user }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* MODAL 3: Export Printable Audit Report */}
+      {showPrintReportModal && (
+        <PrintableAuditReport
+          user={user}
+          observations={auditObservations}
+          engagements={engagements}
+          selectedFirmGLN={selectedFirmGLN}
+          onClose={() => setShowPrintReportModal(false)}
+        />
       )}
     </div>
   );

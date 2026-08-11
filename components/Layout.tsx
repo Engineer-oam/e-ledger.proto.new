@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { User, Sector } from '../types';
+import { User, Sector, UserRole } from '../types';
 import { 
   LayoutDashboard, Truck, FileText, LogOut, Bot, ScanLine, Box, ShieldCheck, 
-  Menu, X, Wallet, Settings, Stamp, Pill, Globe, ShoppingBag, Link as LinkIcon, Database, Activity
+  Menu, X, Wallet, Settings, Stamp, Pill, Globe, ShoppingBag, Link as LinkIcon, Database, Activity, Landmark
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import Logo from './Logo';
@@ -13,7 +13,7 @@ interface LayoutProps {
   onLogout: () => void;
 }
 
-const NavItem = ({ to, icon: Icon, label, active }: { to: string; icon: any; label: string; active: boolean }) => (
+const NavItem: React.FC<{ to: string; icon: any; label: string; active: boolean }> = ({ to, icon: Icon, label, active }) => (
   <Link
     to={to}
     className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
@@ -27,9 +27,105 @@ const NavItem = ({ to, icon: Icon, label, active }: { to: string; icon: any; lab
   </Link>
 );
 
+const getRoleNavItems = (role: UserRole) => {
+  switch (role) {
+    case UserRole.MANUFACTURER:
+    case UserRole.EXPORTER:
+    case UserRole.DISTILLERY:
+    case UserRole.BREWERY:
+      return [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Production Control' },
+        { to: '/batches', icon: Pill, label: 'Batches & SGTIN' },
+        { to: '/stakeholders', icon: Globe, label: 'Distribution Grid' },
+        { to: '/financials', icon: Wallet, label: 'Invoices & Tax' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Chain Explorer' },
+        { to: '/verify', icon: ScanLine, label: 'Verify Barcode' },
+        { to: '/assistant', icon: Bot, label: 'Production AI' },
+      ];
+
+    case UserRole.DISTRIBUTOR:
+    case UserRole.WHOLESALER:
+    case UserRole.CF_AGENT:
+    case UserRole.SUPER_STOCKIST:
+    case UserRole.STOCKIST:
+    case UserRole.SUB_STOCKIST:
+    case UserRole.IMPORTER:
+    case UserRole.LOGISTICS_PROVIDER:
+    case UserRole.BONDED_WAREHOUSE:
+      return [
+        { to: '/dashboard', icon: Truck, label: 'Logistics Hub' },
+        { to: '/batches', icon: Box, label: 'Inward & Outward Stock' },
+        { to: '/financials', icon: Wallet, label: 'E-Way Bills & Tax' },
+        { to: '/stakeholders', icon: Globe, label: 'Supply Partners' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Chain Explorer' },
+        { to: '/verify', icon: ScanLine, label: 'SSCC Scanner' },
+        { to: '/assistant', icon: Bot, label: 'Logistics AI' },
+      ];
+
+    case UserRole.RETAILER:
+    case UserRole.PHARMACIST:
+    case UserRole.RETAIL_VEND:
+    case UserRole.BAR_RESTAURANT:
+      return [
+        { to: '/dashboard', icon: ShoppingBag, label: 'Retail Counter' },
+        { to: '/batches', icon: Pill, label: 'Store Stock' },
+        { to: '/verify', icon: ScanLine, label: 'Scan & Dispense' },
+        { to: '/financials', icon: Wallet, label: 'Tax Receipts' },
+        { to: '/stakeholders', icon: Globe, label: 'Licensed Suppliers' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Chain Explorer' },
+        { to: '/assistant', icon: Bot, label: 'Dispensing AI' },
+      ];
+
+    case UserRole.REGULATOR:
+    case UserRole.CDSCO_OFFICIAL:
+    case UserRole.SLA_OFFICIAL:
+    case UserRole.NPPA_OFFICIAL:
+    case UserRole.EXCISE_OFFICIAL:
+    case UserRole.STATE_EXCISE_COMMISSIONER:
+    case UserRole.DISTRICT_EXCISE_OFFICER:
+    case UserRole.CUSTOMS_OFFICIAL:
+    case UserRole.PORT_OPERATOR:
+    case UserRole.SYSTEM_ADMIN:
+      return [
+        { to: '/dashboard', icon: ShieldCheck, label: 'Regulatory Command' },
+        { to: '/batches', icon: Pill, label: 'National Batch Registry' },
+        { to: '/stakeholders', icon: Globe, label: 'Licensed Entities' },
+        { to: '/financials', icon: Wallet, label: 'GST & Excise Revenue' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Ledger Explorer' },
+        { to: '/verify', icon: ScanLine, label: 'Field Inspection Scan' },
+        { to: '/assistant', icon: Bot, label: 'Regulatory AI' },
+      ];
+
+    case UserRole.AUDITOR:
+    case UserRole.FINANCIER:
+    case UserRole.INSPECTION_AGENCY:
+      return [
+        { to: '/dashboard', icon: Landmark, label: 'CA Audit Portal' },
+        { to: '/batches', icon: Pill, label: 'Batch Data Inspector' },
+        { to: '/financials', icon: Wallet, label: 'GST & Tax Auditor' },
+        { to: '/stakeholders', icon: Globe, label: 'Engaged Entities' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Chain Explorer' },
+        { to: '/verify', icon: ScanLine, label: 'Verify Sample QR' },
+        { to: '/assistant', icon: Bot, label: 'Statutory Audit AI' },
+      ];
+
+    default:
+      return [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Network Panel' },
+        { to: '/batches', icon: Pill, label: 'Inventory' },
+        { to: '/stakeholders', icon: Globe, label: 'Stakeholders' },
+        { to: '/blockchain', icon: LinkIcon, label: 'Chain Explorer' },
+        { to: '/financials', icon: Wallet, label: 'Sales & Tax' },
+        { to: '/verify', icon: ScanLine, label: 'Verify Authenticity' },
+        { to: '/assistant', icon: Bot, label: 'Audit AI' },
+      ];
+  }
+};
+
 const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const navItems = getRoleNavItems(user.role);
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
@@ -61,13 +157,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
         </div>
 
         <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
-          <NavItem to="/dashboard" icon={LayoutDashboard} label="Network Panel" active={location.pathname === '/dashboard'} />
-          <NavItem to="/batches" icon={Pill} label="Inventory" active={location.pathname === '/batches'} />
-          <NavItem to="/stakeholders" icon={Globe} label="Stakeholders" active={location.pathname === '/stakeholders'} />
-          <NavItem to="/blockchain" icon={LinkIcon} label="Chain Explorer" active={location.pathname === '/blockchain'} />
-          <NavItem to="/financials" icon={Wallet} label="Sales & Tax" active={location.pathname === '/financials'} />
-          <NavItem to="/verify" icon={ScanLine} label="Verify Authenticity" active={location.pathname === '/verify'} />
-          <NavItem to="/assistant" icon={Bot} label="Audit AI" active={location.pathname === '/assistant'} />
+          {navItems.map((item) => (
+            <NavItem 
+              key={item.to} 
+              to={item.to} 
+              icon={item.icon} 
+              label={item.label} 
+              active={location.pathname === item.to} 
+            />
+          ))}
         </nav>
 
         <div className="p-4 border-t border-slate-800">
@@ -75,10 +173,13 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
             <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg group-hover:scale-105 transition-transform">{user.name.charAt(0)}</div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate text-slate-200 group-hover:text-white">{user.name}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-black truncate group-hover:text-slate-400">{user.orgName}</p>
+              <p className="text-[10px] text-emerald-400 font-black truncate uppercase">
+                {user.positionLabel || user.role.replace(/_/g, ' ')}
+              </p>
+              <p className="text-[10px] text-slate-500 font-bold truncate">{user.orgName || user.caFirmName || 'Authorized Node'}</p>
             </div>
           </Link>
-          <button onClick={onLogout} className="w-full flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-xl transition-colors">
+          <button onClick={onLogout} className="w-full flex items-center space-x-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-xl transition-colors cursor-pointer">
             <LogOut size={18} />
             <span className="text-sm font-bold">Sign Out</span>
           </button>
@@ -99,10 +200,12 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
           <div className="flex items-center gap-4 md:gap-6">
              <div className="hidden sm:flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
                <Activity size={14} className="text-emerald-600" />
-               <span className="text-[10px] font-black uppercase text-emerald-800">{user.sector === Sector.PHARMA ? 'Pharma Regulatory Compliance' : 'State Excise Compliance'}</span>
+               <span className="text-[10px] font-black uppercase text-emerald-800">
+                 {user.positionLabel || (user.sector === Sector.PHARMA ? 'Pharma Regulatory Compliance' : 'State Excise Compliance')}
+               </span>
              </div>
              <div className="flex flex-col items-end">
-               <span className="text-[10px] text-slate-400 font-black uppercase">License ID</span>
+               <span className="text-[10px] text-slate-400 font-black uppercase">License ID / GLN</span>
                <span className="text-xs font-mono font-bold text-slate-700">{user.gln}</span>
              </div>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { LedgerService } from '../services/ledgerService';
 import { FileText, ArrowUpRight, ArrowDownLeft, RotateCcw, Printer, Filter, IndianRupee, Search, Download, FileSpreadsheet } from 'lucide-react';
 import PrintableInvoice from './PrintableInvoice';

@@ -1,10 +1,11 @@
-import { Batch, BatchStatus, TraceEvent, User, UserRole, LogisticsUnit, VerificationRequest, VerificationStatus, PaymentDetails, GSTDetails, EWayBill, ReturnReason, Sector, ERPType, AuditLog, AuditObservation, EngagementLetter } from '../types';
+import { Batch, BatchStatus, TraceEvent, User, UserRole, LogisticsUnit, VerificationRequest, VerificationStatus, PaymentDetails, GSTDetails, EWayBill, ReturnReason, Sector, ERPType, AuditLog, AuditObservation, EngagementLetter, PrintAuditRecord } from '../types';
 
 const LEDGER_STORAGE_KEY = 'eledger_data';
 const SSCC_STORAGE_KEY = 'eledger_sscc';
 const AUDIT_STORAGE_KEY = 'eledger_audit_logs';
 const AUDIT_OBS_STORAGE_KEY = 'eledger_audit_observations';
 const ENGAGEMENT_STORAGE_KEY = 'eledger_engagements';
+const PRINT_AUDIT_STORAGE_KEY = 'eledger_print_audits';
 const DELAY_MS = 200;
 
 /**
@@ -211,13 +212,11 @@ export const LedgerService = {
     list.unshift(newEngagement);
     localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(list));
 
-    await createAuditLogLocal(
+    logAuditLocal(
       actor.gln,
-      actor.name,
-      actor.role,
       'SMART_CONTRACT_ENGAGEMENT_PROPOSED',
-      `CA Auditor initiated Smart Contract Engagement Letter ${newEngagement.id} for client firm ${newEngagement.firmName} (${newEngagement.firmGLN}).`,
-      { engagementId: newEngagement.id, smartContract: newEngagement.smartContractAddress, scope: newEngagement.scope }
+      newEngagement.id,
+      `CA Auditor initiated Smart Contract Engagement Letter ${newEngagement.id} for client firm ${newEngagement.firmName} (${newEngagement.firmGLN}).`
     );
 
     return newEngagement;
@@ -238,13 +237,11 @@ export const LedgerService = {
     list[index] = item;
     localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(list));
 
-    await createAuditLogLocal(
+    logAuditLocal(
       actor.gln,
-      actor.name,
-      actor.role,
       'SMART_CONTRACT_ENGAGEMENT_EXECUTED',
-      `Smart Contract Engagement ${item.id} executed on-chain (${item.smartContractAddress}). Read-only audit access granted to CA ${item.auditorName}.`,
-      { engagementId: item.id, smartContract: item.smartContractAddress }
+      item.id,
+      `Smart Contract Engagement ${item.id} executed on-chain (${item.smartContractAddress}). Read-only audit access granted to CA ${item.auditorName}.`
     );
 
     return item;
@@ -261,13 +258,11 @@ export const LedgerService = {
     list[index].status = 'TERMINATED';
     localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(list));
 
-    await createAuditLogLocal(
+    logAuditLocal(
       actor.gln,
-      actor.name,
-      actor.role,
       'SMART_CONTRACT_ENGAGEMENT_TERMINATED',
-      `Engagement Letter ${engagementId} terminated on-chain. Read-only audit access revoked.`,
-      { engagementId }
+      engagementId,
+      `Engagement Letter ${engagementId} terminated on-chain. Read-only audit access revoked.`
     );
 
     return true;
@@ -558,5 +553,97 @@ export const LedgerService = {
       const updated = { ...batch, status: newStatus, totalReturnedQuantity: (batch.totalReturnedQuantity || 0) + q };
       await LedgerService.updateBatch(updated, returnEvent);
       return true;
+  },
+
+  getPrintAudits: async (): Promise<PrintAuditRecord[]> => {
+    await delay(50);
+    const stored = localStorage.getItem(PRINT_AUDIT_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    const defaultPrintAudits: PrintAuditRecord[] = [
+      {
+        id: 'PRT-2026-881920',
+        timestamp: '2026-08-11T09:15:30Z',
+        printedByGLN: '0890001234567',
+        printedByName: 'Dr. Ananya Sharma',
+        printedByRole: 'MANUFACTURER',
+        printedByOrg: 'Global Life Sciences Corp',
+        docType: 'TAX_INVOICE',
+        docId: 'INV-2024-001',
+        docTitle: 'Tax Invoice #INV-2024-001',
+        signature: '0x8f3c71a9b24e0513982e442a8b9f123456789abc'
+      },
+      {
+        id: 'PRT-2026-773411',
+        timestamp: '2026-08-10T14:40:12Z',
+        printedByGLN: '0890002345678',
+        printedByName: 'Vikram Mehta',
+        printedByRole: 'DISTRIBUTOR',
+        printedByOrg: 'Apex Pharma Distributors',
+        docType: 'SSCC_LOGISTICS_PASS',
+        docId: '108900023456780001',
+        docTitle: 'SSCC Logistics Pallet Pass',
+        signature: '0x7a2d81f8c33a1102947e551b9d8e987654321def'
+      }
+    ];
+    localStorage.setItem(PRINT_AUDIT_STORAGE_KEY, JSON.stringify(defaultPrintAudits));
+    return defaultPrintAudits;
+  },
+
+  getPrintAuditByID: async (printId: string): Promise<PrintAuditRecord | undefined> => {
+    const audits = await LedgerService.getPrintAudits();
+    const clean = printId.trim().toUpperCase();
+    return audits.find(a => 
+      a.id.toUpperCase() === clean || 
+      clean.includes(a.id.toUpperCase()) || 
+      a.docId.toUpperCase() === clean
+    );
+  },
+
+  createPrintAuditRecord: async (
+    actor: { gln: string; name: string; role: string; orgName: string },
+    docType: PrintAuditRecord['docType'],
+    docId: string,
+    docTitle?: string
+  ): Promise<PrintAuditRecord> => {
+    const audits = await LedgerService.getPrintAudits();
+    
+    // Return existing recent record for same docId to avoid duplicate IDs during quick re-renders
+    const existing = audits.find(a => a.docId === docId && a.printedByGLN === actor.gln && (Date.now() - new Date(a.timestamp).getTime()) < 60000);
+    if (existing) {
+      return existing;
+    }
+
+    const randHex = Math.floor(0x100000 + Math.random() * 0x8fffff).toString(16).toUpperCase();
+    const printId = `PRT-2026-${randHex}`;
+    const timestamp = new Date().toISOString();
+    const sigMessage = `${printId}:${actor.gln}:${docType}:${docId}:${timestamp}`;
+    const signature = `0x${await sha256(sigMessage)}`;
+
+    const newRecord: PrintAuditRecord = {
+      id: printId,
+      timestamp,
+      printedByGLN: actor.gln || '0890000000000',
+      printedByName: actor.name || 'Authorized Operator',
+      printedByRole: actor.role || 'OPERATOR',
+      printedByOrg: actor.orgName || 'Licensed Entity Node',
+      docType,
+      docId,
+      docTitle: docTitle || `${docType.replace(/_/g, ' ')} #${docId}`,
+      signature
+    };
+
+    audits.unshift(newRecord);
+    localStorage.setItem(PRINT_AUDIT_STORAGE_KEY, JSON.stringify(audits));
+
+    logAuditLocal(
+      actor.gln,
+      'DOCUMENT_PRINTED',
+      docId,
+      `Print Audit ID: ${printId} | Operator: ${actor.name} (${actor.gln}) | Doc: ${docType} #${docId}`
+    );
+
+    return newRecord;
   }
 };

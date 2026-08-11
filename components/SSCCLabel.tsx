@@ -1,5 +1,6 @@
 import React from 'react';
 import { LogisticsUnit, User } from '../types';
+import PrintHeader from './PrintHeader';
 
 interface SSCCLabelProps {
   unit: LogisticsUnit;
@@ -26,8 +27,16 @@ const SSCCLabel: React.FC<SSCCLabelProps> = ({ unit, user, onClose }) => {
         <div className="p-8 overflow-y-auto flex-1 bg-slate-100 flex justify-center">
           
           {/* The Label - A6 Aspect Ratio Approx */}
-          <div className="bg-white w-[350px] min-h-[500px] border border-black p-4 flex flex-col text-black shadow-lg">
+          <div className="bg-white w-[380px] min-h-[500px] border border-black p-4 flex flex-col text-black shadow-lg">
             
+            {/* Header Print Audit Trail */}
+            <PrintHeader 
+              docType="SSCC_LOGISTICS_PASS" 
+              docId={unit.sscc} 
+              docTitle={`SSCC Logistics Label #${unit.sscc}`}
+              user={user} 
+            />
+
             {/* Header Section: Company Info */}
             <div className="border-b-2 border-black pb-4 mb-4">
               <h1 className="text-xl font-bold uppercase mb-1">{user.orgName}</h1>

@@ -2,6 +2,7 @@
 import React from 'react';
 import { EWayBill } from '../types';
 import { Printer } from 'lucide-react';
+import PrintHeader from './PrintHeader';
 
 interface PrintableInvoiceProps {
   type: 'INVOICE' | 'CREDIT_NOTE' | 'RECEIPT';
@@ -52,6 +53,13 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ type, data, onClose
         {/* Printable Area */}
         <div className="flex-1 overflow-y-auto p-8 print:p-8 print:overflow-visible bg-white text-slate-900 font-sans">
           
+          {/* Header Print Audit Trail */}
+          <PrintHeader 
+            docType={type === 'INVOICE' ? 'TAX_INVOICE' : type === 'CREDIT_NOTE' ? 'CREDIT_NOTE' : 'RETAIL_RECEIPT'}
+            docId={data.id}
+            docTitle={`${type === 'INVOICE' ? 'Tax Invoice' : type === 'CREDIT_NOTE' ? 'Credit Note' : 'Retail Receipt'} #${data.id}`}
+          />
+
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
             <div>

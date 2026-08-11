@@ -47,6 +47,7 @@ export enum Sector {
 
 export enum ERPType {
   SAP = 'SAP / ORACLE',
+  ORACLE = 'ORACLE',
   TALLY = 'TALLY',
   ZOHO = 'ZOHO / ODOO',
   MARG = 'MARG ERP',
@@ -67,6 +68,8 @@ export enum UserRole {
   CUSTOMS_OFFICIAL = 'CUSTOMS_OFFICIAL',
   PORT_OPERATOR = 'PORT_OPERATOR',
   SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  BONDED_WAREHOUSE = 'BONDED_WAREHOUSE',
+  EXCISE_OFFICIAL = 'EXCISE_OFFICIAL',
   // Pharma Specific Roles (India)
   CDSCO_OFFICIAL = 'CDSCO_OFFICIAL',
   SLA_OFFICIAL = 'SLA_OFFICIAL',
@@ -449,4 +452,17 @@ export interface AuditObservation {
   description: string;
   correctiveAction: string;
   status: 'OPEN' | 'RESOLVED' | 'UNDER_REVIEW' | 'ESCALATED_TO_REGULATOR';
+}
+
+export interface PrintAuditRecord {
+  id: string; // e.g. "PRT-2026-881920"
+  timestamp: string;
+  printedByGLN: string;
+  printedByName: string;
+  printedByRole: string;
+  printedByOrg: string;
+  docType: 'TAX_INVOICE' | 'CREDIT_NOTE' | 'RETAIL_RECEIPT' | 'GS1_BATCH_LABEL' | 'SSCC_LOGISTICS_PASS' | 'COMPLIANCE_CERTIFICATE' | 'DOCUMENT';
+  docId: string;
+  docTitle?: string;
+  signature: string;
 }
