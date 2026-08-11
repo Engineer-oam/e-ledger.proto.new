@@ -5,6 +5,7 @@ import { AuthService } from '../services/authService';
 import { User } from '../types';
 import { ShieldCheck, ArrowRight, Loader2, KeyRound, Pill, Globe, Box, Database, Lock, Activity, Truck } from 'lucide-react';
 import Logo from './Logo';
+import Footer from './Footer';
 
 const LandingPage: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -154,6 +155,8 @@ const LandingPage: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) =
           </div>
         </div>
       </section>
+
+      <Footer variant="dark" />
     </div>
   );
 };

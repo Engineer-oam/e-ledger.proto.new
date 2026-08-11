@@ -785,8 +785,11 @@ const Signup: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-800/80 py-6 text-center text-[11px] font-mono text-slate-500 uppercase tracking-widest">
-        National Supply Chain Grid © {new Date().getFullYear()} — CDSCO, SLA & iVEDA Compliant
+      <footer className="relative z-10 border-t border-slate-800/80 py-6 text-center text-[11px] font-mono text-slate-500 uppercase tracking-widest flex flex-col sm:flex-row items-center justify-between px-8 gap-2">
+        <span>National Supply Chain Grid © {new Date().getFullYear()} — CDSCO, SLA & iVEDA Compliant</span>
+        <span className="text-slate-400">
+          Powered by <strong className="text-teal-400 font-bold">Synthrova Technologies</strong>
+        </span>
       </footer>
     </div>
   );

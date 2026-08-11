@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import Logo from './Logo';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -211,8 +212,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar flex flex-col justify-between">
+          <div className="flex-1">
+            {children}
+          </div>
+          <Footer />
         </main>
       </div>
     </div>
