@@ -1,0 +1,10 @@
+{
+  "name": "Remix Pharma Ledger India",
+  "description": "A comprehensive blockchain-backed traceability and regulatory compliance platform for the Indian Pharmaceutical sector, supporting CDSCO, SLA, and NPPA oversight.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
