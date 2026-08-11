@@ -1,0 +1,6 @@
+backend/
+blockchain/
+Dockerfile
+deploy-ec2.sh
+cloudformation.yaml
+eledger_mvp.db

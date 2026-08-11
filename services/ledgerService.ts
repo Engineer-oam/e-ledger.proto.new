@@ -37,8 +37,8 @@ const isRemote = () => {
   // Check for known cloud environments that SHOULD use remote DB
   const isCloud = ['amplifyapp.com', 'compute.amazonaws.com'].some(d => window.location.hostname.includes(d));
   
-  // Explicitly exclude AI Studio preview domains from "cloud" behavior by default
-  if (window.location.hostname.includes('run.app')) return false;
+  // Explicitly exclude AI Studio preview domains (*.run.app), Vercel (*.vercel.app), and Netlify (*.netlify.app) from "cloud" behavior by default
+  if (window.location.hostname.includes('run.app') || window.location.hostname.includes('vercel.app') || window.location.hostname.includes('netlify.app')) return false;
 
   return isCloud;
 };
